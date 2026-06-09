@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Glowing circular backing profile for premium framing -->
+    <path
+        android:fillColor="#152818"
+        android:pathData="M54,54m-42,0a28,28 0,1 1,84 0a42,42 0,1 1,-84 0" />
+
+    <!-- Thin white/mint halo ring -->
+    <path
+        android:strokeColor="#5EDD9E"
+        android:strokeWidth="1.2"
+        android:pathData="M54,14 A40,40 0 1,1 53.99,14 Z" />
+
+    <!-- Stylized seeding dual leaves (Grows from carbon footprints) -->
+    <!-- Left emerald leaf -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M54,56 C36,56 30,36 44,24 C54,16 54,36 54,56 Z" />
+
+    <!-- Right pastel mint leaf -->
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M54,56 C72,56 78,36 64,24 C54,16 54,36 54,56 Z" />
+
+    <!-- Central stem highlight -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,66 L54,32" />
+
+    <!-- Stylized organic Carbon Footprint base pad -->
+    <path
+        android:fillColor="#5EDD9E"
+        android:pathData="M43,65 C39,69 37,76 41,82 C45,88 53,89 58,87 C63,85 66,79 64,73 C62,67 51,63 43,65 Z" />
+
+    <!-- Organic toe print dots (Golden yellow & white seeds of hope) -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:pathData="M40,59A2.5,2.5 0,1 1,39.99,59 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,56A2,2 0,1 1,45.99,56 Z" />
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M52,55A1.8,1.8 0,1 1,51.99,55 Z" />
+</vector>

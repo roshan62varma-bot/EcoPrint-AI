@@ -1,0 +1,8 @@
+{
+  "name": "EcoPrint AI",
+  "description": "A carbon footprint awareness, tracking, and reduction platform that helps you calculate emissions, record daily green steps, and receive personalized AI reduction tips.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
