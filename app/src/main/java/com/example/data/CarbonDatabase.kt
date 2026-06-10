@@ -20,7 +20,7 @@ abstract class CarbonDatabase : RoomDatabase() {
                     CarbonDatabase::class.java,
                     "carbon_database"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(true)
                 .build()
                 INSTANCE = instance
                 instance

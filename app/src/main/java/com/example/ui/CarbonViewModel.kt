@@ -12,6 +12,7 @@ import com.example.data.LoggedAction
 import com.example.data.TrackedDay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -26,9 +27,12 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-class CarbonViewModel(application: Application) : AndroidViewModel(application) {
+@OptIn(ExperimentalCoroutinesApi::class)
+class CarbonViewModel(
+    application: Application,
+    private val repository: CarbonRepository = CarbonRepository(CarbonDatabase.getDatabase(application).carbonDao())
+) : AndroidViewModel(application) {
 
-    private val repository: CarbonRepository
     private val prefs = application.getSharedPreferences("eco_print_prefs", android.content.Context.MODE_PRIVATE)
 
     private val _userName = MutableStateFlow(prefs.getString("user_name", "Roshan Varma") ?: "Roshan Varma")
@@ -46,10 +50,6 @@ class CarbonViewModel(application: Application) : AndroidViewModel(application) 
             .apply()
     }
 
-    init {
-        val database = CarbonDatabase.getDatabase(application)
-        repository = CarbonRepository(database.carbonDao())
-    }
 
     private val _selectedDate = MutableStateFlow(getCurrentDateString())
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()

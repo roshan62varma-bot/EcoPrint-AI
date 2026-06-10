@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -137,6 +138,7 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
                         .padding(vertical = 4.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { showProfileEditDialog = true }
+                        .testTag("user_profile_header")
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
@@ -1092,7 +1094,7 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
                         lineHeight = 16.sp
                     )
 
-                    Divider(color = borderColor)
+                    HorizontalDivider(color = borderColor)
 
                     Text(
                         text = "Milestones & Achievements",
@@ -1219,7 +1221,7 @@ fun DateSelector(
                     .testTag("prev_date_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowLeft,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = "Previous Day",
                     tint = dateTextColor
                 )
@@ -1247,7 +1249,7 @@ fun DateSelector(
                     .testTag("next_date_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowRight,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Next Day",
                     tint = if (isNextEnabled) dateTextColor else dateTextColor.copy(alpha = 0.38f)
                 )
@@ -1496,7 +1498,7 @@ fun TabNavigationRow(
         Triple("calculator", "Track", Icons.Default.Edit),
         Triple("habits", "Eco-Habits", Icons.Default.CheckCircle),
         Triple("ai", "AI Insights", Icons.Default.Info),
-        Triple("history", "Analytics", Icons.Default.List)
+        Triple("history", "Analytics", Icons.AutoMirrored.Filled.List)
     )
 
     val isDark = isSystemInDarkTheme()
@@ -1510,6 +1512,7 @@ fun TabNavigationRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
+            .testTag("tab_navigation_bar")
             .border(1.dp, navBorderColor, RoundedCornerShape(18.dp)),
         colors = CardDefaults.cardColors(containerColor = navContainerColor),
         shape = RoundedCornerShape(18.dp)
@@ -1656,7 +1659,7 @@ fun CarbonCalculatorSectionCard(
                         .fillMaxWidth()
                         .padding(start = 14.dp, end = 14.dp, bottom = 16.dp)
                 ) {
-                    Divider(
+                    HorizontalDivider(
                         color = PolishBorder.copy(alpha = 0.6f),
                         thickness = 1.dp,
                         modifier = Modifier.padding(bottom = 12.dp)
