@@ -21,8 +21,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
+/**
+ * CarbonSplashScreen defines an animated entrance experience utilizing 
+ * orbital circles, pulsing scale modifiers, and organic Twin Seedling leafy elements
+ * that direct the user into the primary application after introductory visual delay.
+ *
+ * @param onTimeout Callback executed when the splash animation timeout finishes.
+ */
 @Composable
-fun CarbonSplashScreen(onTimeout: () -> Unit) {
+public fun CarbonSplashScreen(onTimeout: () -> Unit): Unit {
     // 1. Initialized delay trigger
     LaunchedEffect(key1 = Unit) {
         delay(2200) // Beautiful 2.2s intro visual timeout

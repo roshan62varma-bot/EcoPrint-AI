@@ -41,9 +41,16 @@ import com.example.data.LoggedAction
 import com.example.data.TrackedDay
 import com.example.ui.theme.*
 
+/**
+ * CarbonDashboard defines the core multi-tab interface of EcoPrint AI.
+ * It coordinates calculations, habit registration lists, historical analytics trends,
+ * and custom prompt configurations with Gemini.
+ *
+ * @param viewModel Central carbon dashboard View Model managing database, flows, and calculations.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CarbonDashboard(viewModel: CarbonViewModel) {
+public fun CarbonDashboard(viewModel: CarbonViewModel): Unit {
     val state by viewModel.uiState.collectAsState()
     val isInsightLoading by viewModel.isLoadingInsight.collectAsState()
     val aiInsightText by viewModel.aiInsight.collectAsState()
@@ -61,7 +68,6 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
     val textDarkGreen = if (isDark) Color(0xFFD3E8D0) else PolishTextDarkGreen
     val accentGreen = if (isDark) Color(0xFF5EDD9E) else PolishAccentGreen
     val lightGreenBg = if (isDark) Color(0xFF1E3320) else PolishLightGreen
-    val surfaceColor = if (isDark) SoftDarkCard else Color.White
     val borderColor = if (isDark) Color(0xFF2E332E) else PolishBorder
 
     var activeTab by remember { mutableStateOf("calculator") } // "calculator", "habits", "ai", "history"
@@ -71,12 +77,6 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
     var showProfileEditDialog by remember { mutableStateOf(false) }
     var showStreakDialog by remember { mutableStateOf(false) }
     var activeInfoDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
-
-    // Internal expansion state trackers for Calculator sections to allow automatic collapsible minimization
-    var transportExpanded by remember { mutableStateOf(true) }
-    var utilitiesExpanded by remember { mutableStateOf(true) }
-    var nutritionExpanded by remember { mutableStateOf(false) } // collapsed by default to save vertical height
-    var wasteExpanded by remember { mutableStateOf(false) }
 
     val presetActions = listOf(
         Triple("Took a bicycle instead of car", 3.0f, "transport"),
@@ -130,82 +130,17 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
             contentPadding = PaddingValues(top = 4.dp, bottom = 32.dp)
         ) {
             
-            // --- 1. Client Details Head (Simplified and clean, clicks open profile customization dialog) ---
+            // --- 1. Client Details Head (Modularized to avoid unnecessary headers recomposition) ---
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { showProfileEditDialog = true }
-                        .testTag("user_profile_header")
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    val avatarInitials = remember(userName) {
-                        val parts = userName.trim().split("\\s+".toRegex())
-                        if (parts.size >= 2) {
-                            (parts[0].take(1) + parts[1].take(1)).uppercase()
-                        } else if (parts.isNotEmpty() && parts[0].isNotBlank()) {
-                            parts[0].take(2).uppercase()
-                        } else {
-                            "RV"
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(if (isDark) Color(0xFF2E4E30) else Color(0xFFD1E8D1), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = avatarInitials,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (isDark) Color.White else Color(0xFF111F11),
-                            fontSize = 15.sp
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "WELCOME BACK (TAP TO EDIT PROFILE)",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = accentGreen,
-                                letterSpacing = 0.5.sp
-                            )
-                            Text(
-                                text = userName,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Black,
-                                color = textPrimary
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (trackingStreak > 0) MaterialTheme.colorScheme.primaryContainer else if (isDark) Color(0xFF2C352E) else Color(0xFFE2EBE3),
-                            modifier = Modifier
-                                .padding(start = 8.dp)
-                                .clickable { showStreakDialog = true }
-                        ) {
-                            Text(
-                                text = if (trackingStreak > 0) "🔥 $trackingStreak Day Streak" else "🌱 0 Day Streak",
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 11.sp,
-                                color = if (trackingStreak > 0) MaterialTheme.colorScheme.onPrimaryContainer else if (isDark) Color(0xFFA2CBA5) else PolishTextDarkGreen,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
+                UserProfileHeader(
+                    userName = userName,
+                    trackingStreak = trackingStreak,
+                    accentGreen = accentGreen,
+                    textPrimary = textPrimary,
+                    isDark = isDark,
+                    onProfileClick = { showProfileEditDialog = true },
+                    onStreakClick = { showStreakDialog = true }
+                )
             }
 
             // --- 2. Date Navigation Selector ---
@@ -339,419 +274,74 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
                         }
                     }
 
-                    // --- SECTION 1: TRANSPORT ---
+                    // --- SECTION 1: TRANSPORT (Modularized to isolate slider changes) ---
                     item {
-                        CarbonCalculatorSectionCard(
-                            title = "1. Transport Footprint (0.2kg CO₂/km)",
-                            leadingIcon = Icons.Default.PlayArrow,
-                            accentColor = PolishMediumGreen,
-                            isExpanded = transportExpanded,
-                            onHeaderClick = { transportExpanded = !transportExpanded },
-                            summaryText = "Car: ${state.carKm.toInt()} km • Transit: ${state.transitKm.toInt()} km • Flights: ${state.flightHoursYearly.toInt()} hrs"
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Personal Car Distance: ${String.format("%.0f", state.carKm)} km/day",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textPrimary
-                                )
-                                IconButton(
-                                    onClick = {
-                                        activeInfoDialog = "Personal Car Distance" to "Commuting by car has a high carbon impact. On average, standard engines release 0.20 kg of CO₂ per kilometer driven. Transitioning to electric cars or carpooling helps save emission offsets."
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Car distance explanation",
-                                        tint = accentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            Slider(
-                                value = state.carKm,
-                                onValueChange = { viewModel.updateCarKm(it) },
-                                onValueChangeFinished = { viewModel.saveCurrentDay() },
-                                valueRange = 0f..150f,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = PolishMediumGreen,
-                                    activeTrackColor = PolishMediumGreen
-                                ),
-                                modifier = Modifier.testTag("car_slider")
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Public Transit: ${String.format("%.0f", state.transitKm)} km/day",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textPrimary
-                                )
-                                IconButton(
-                                    onClick = {
-                                        activeInfoDialog = "Public Transit" to "Trains, buses, and subways are highly efficient. They emit only around 0.08 kg of CO₂ per passenger kilometer, sharing the transit footprint effectively."
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Public Transit explanation",
-                                        tint = accentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            Slider(
-                                value = state.transitKm,
-                                onValueChange = { viewModel.updateTransitKm(it) },
-                                onValueChangeFinished = { viewModel.saveCurrentDay() },
-                                valueRange = 0f..100f,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = PolishMediumGreen,
-                                    activeTrackColor = PolishMediumGreen
-                                ),
-                                modifier = Modifier.testTag("transit_slider")
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Yearly Flight Hours: ${String.format("%.0f", state.flightHoursYearly)} hours",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textPrimary
-                                )
-                                IconButton(
-                                    onClick = {
-                                        activeInfoDialog = "Yearly Flight Hours" to "Aviation emissions are extremely dense. Flying contributes approximately 250 kg of CO₂ per hour in the air. Offsets or fewer flights make a major climate difference."
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Flight hours explanation",
-                                        tint = accentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            Slider(
-                                value = state.flightHoursYearly,
-                                onValueChange = { viewModel.updateFlightHours(it) },
-                                onValueChangeFinished = { viewModel.saveCurrentDay() },
-                                valueRange = 0f..80f,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = PolishMediumGreen,
-                                    activeTrackColor = PolishMediumGreen
-                                )
-                            )
-                        }
+                        TransportSectionCard(
+                            carKm = state.carKm,
+                            transitKm = state.transitKm,
+                            flightHoursYearly = state.flightHoursYearly,
+                            accentGreen = accentGreen,
+                            textPrimary = textPrimary,
+                            onCarChange = { viewModel.updateCarKm(it) },
+                            onTransitChange = { viewModel.updateTransitKm(it) },
+                            onFlightChange = { viewModel.updateFlightHours(it) },
+                            onSave = { viewModel.saveCurrentDay() },
+                            onInfoDialog = { activeInfoDialog = it }
+                        )
                     }
 
-                    // --- SECTION 2: UTILITY & POWER ---
+                    // --- SECTION 2: UTILITY & POWER (Modularized to isolate inputs) ---
                     item {
-                        CarbonCalculatorSectionCard(
-                            title = "2. Utility & Power (0.45kg CO₂/kW)",
-                            leadingIcon = Icons.Default.Star,
-                            accentColor = PolishMediumGreen,
-                            isExpanded = utilitiesExpanded,
-                            onHeaderClick = { utilitiesExpanded = !utilitiesExpanded },
-                            summaryText = "Elec: ${state.electricityKwh.toInt()} kWh • Heat Fuel: ${state.heatingLevel}"
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Electricity Used: ${String.format("%.0f", state.electricityKwh)} kWh/day",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textPrimary
-                                )
-                                IconButton(
-                                    onClick = {
-                                        activeInfoDialog = "Electricity Power Consumption" to "Electrical grids rely on fossil fuels in many areas. Every kWh consumed averages 0.45 kg of CO₂ emissions. Energy-saving appliances and solar power help minimize this footprint."
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Electricity explanation",
-                                        tint = accentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            Slider(
-                                value = state.electricityKwh,
-                                onValueChange = { viewModel.updateElectricityKwh(it) },
-                                onValueChangeFinished = { viewModel.saveCurrentDay() },
-                                valueRange = 0f..50f,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = PolishMediumGreen,
-                                    activeTrackColor = PolishMediumGreen
-                                ),
-                                modifier = Modifier.testTag("electricity_slider")
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Home Heating Fuel Intensity: ${state.heatingLevel}",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textPrimary
-                                )
-                                IconButton(
-                                    onClick = {
-                                        activeInfoDialog = "Home Heating Fuel" to "Heating fuel types differ heavily in carbon intensity. 'None' represents electric/heat pumps, whereas 'Low', 'Medium', or 'High' denote natural gas/heating oil furnace systems."
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Heating fuel explanation",
-                                        tint = accentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                val levels = listOf("None", "Low", "Medium", "High")
-                                levels.forEach { level ->
-                                    val isSelected = state.heatingLevel == level
-                                    OutlinedButton(
-                                        onClick = { viewModel.updateHeatingLevel(level) },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = if (isSelected) lightGreenBg else Color.Transparent
-                                        ),
-                                        border = androidx.compose.foundation.BorderStroke(
-                                            width = if (isSelected) 2.dp else 1.dp,
-                                            color = if (isSelected) PolishMediumGreen else borderColor
-                                        ),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
-                                        Text(
-                                            text = level,
-                                            fontSize = 11.sp,
-                                            color = if (isSelected) textDarkGreen else textSecondary,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        UtilitySectionCard(
+                            electricityKwh = state.electricityKwh,
+                            heatingLevel = state.heatingLevel,
+                            accentGreen = accentGreen,
+                            textPrimary = textPrimary,
+                            textDarkGreen = textDarkGreen,
+                            textSecondary = textSecondary,
+                            lightGreenBg = lightGreenBg,
+                            borderColor = borderColor,
+                            onElectricityChange = { viewModel.updateElectricityKwh(it) },
+                            onHeatingChange = { viewModel.updateHeatingLevel(it) },
+                            onSave = { viewModel.saveCurrentDay() },
+                            onInfoDialog = { activeInfoDialog = it }
+                        )
                     }
 
-                    // --- SECTION 3: DIET preferences ---
+                    // --- SECTION 3: DIET (Modularized to isolate dietary pickers) ---
                     item {
-                        CarbonCalculatorSectionCard(
-                            title = "3. Nutrition & Food Style",
-                            leadingIcon = Icons.Default.Favorite,
-                            accentColor = PolishMediumGreen,
-                            isExpanded = nutritionExpanded,
-                            onHeaderClick = { nutritionExpanded = !nutritionExpanded },
-                            summaryText = "Preference: ${state.dietPreference}"
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Chosen Preference: ${state.dietPreference}",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textPrimary
-                                )
-                                IconButton(
-                                    onClick = {
-                                        activeInfoDialog = "Diet Footprint Preferences" to "Diets differ widely in resource demand. Vegan/plant-based diets emit only ~1.2 kg CO₂/day. Vegetarian diets average ~1.7 kg CO₂/day. Balanced diets emit ~2.5 kg CO₂/day, whereas Meat-Heavy diets exceed ~4.2 kg CO₂/day due to intensive livestock emissions."
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Diet explanation",
-                                        tint = accentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                val diets = listOf("Vegan", "Vegetarian", "Balanced", "Meat Heavy")
-                                diets.forEach { diet ->
-                                    val isSelected = state.dietPreference == diet
-                                    val color = if (isSelected) textDarkGreen else textSecondary
-                                    OutlinedButton(
-                                        onClick = { viewModel.updateDietPreference(diet) },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = if (isSelected) lightGreenBg else Color.Transparent
-                                        ),
-                                        border = androidx.compose.foundation.BorderStroke(
-                                            width = if (isSelected) 2.dp else 1.dp,
-                                            color = if (isSelected) PolishMediumGreen else borderColor
-                                        )
-                                    ) {
-                                        Text(
-                                            text = diet,
-                                            fontSize = 9.sp,
-                                            color = color,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        NutritionSectionCard(
+                            dietPreference = state.dietPreference,
+                            accentGreen = accentGreen,
+                            textPrimary = textPrimary,
+                            textDarkGreen = textDarkGreen,
+                            textSecondary = textSecondary,
+                            lightGreenBg = lightGreenBg,
+                            borderColor = borderColor,
+                            onDietChange = { viewModel.updateDietPreference(it) },
+                            onInfoDialog = { activeInfoDialog = it }
+                        )
                     }
 
-                    // --- SECTION 4: WASTE & RECYCLING ---
+                    // --- SECTION 4: WASTE & RECYCLING (Modularized to isolate waste pickers) ---
                     item {
-                        CarbonCalculatorSectionCard(
-                            title = "4. Waste & Recycle (1.5kg CO₂/bag)",
-                            leadingIcon = Icons.Default.Warning,
-                            accentColor = PolishMediumGreen,
-                            isExpanded = wasteExpanded,
-                            onHeaderClick = { wasteExpanded = !wasteExpanded },
-                            summaryText = "Trash bags: ${String.format("%.1f", state.trashBags)} bags • Recycled: ${if (state.recycledChecked) "Yes" else "No"}"
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Daily Trash Generation",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = textPrimary
-                                        )
-                                        IconButton(
-                                            onClick = {
-                                                activeInfoDialog = "Daily Trash Impact" to "Unsorted municipal solid waste decomposes in landfills to release powerful greenhouse gases including methane. Each standard trash bag (~30L) is calculated at approximately 1.5 kg of lifecycle CO₂."
-                                            },
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Info,
-                                                contentDescription = "Trash explanation",
-                                                tint = accentGreen,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = "${String.format("%.1f", state.trashBags)} trash bags",
-                                        fontSize = 12.sp,
-                                        color = textSecondary
-                                    )
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = { viewModel.updateTrashBags((state.trashBags - 0.5f).coerceAtLeast(0f)) },
-                                        modifier = Modifier.minimumInteractiveComponentSize()
-                                    ) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Decrease", tint = if (isDark) Color(0xFFE57373) else PolishDangerRed.copy(alpha = 0.8f))
-                                    }
-                                    IconButton(
-                                        onClick = { viewModel.updateTrashBags(state.trashBags + 0.5f) },
-                                        modifier = Modifier.minimumInteractiveComponentSize()
-                                    ) {
-                                        Icon(Icons.Default.Add, contentDescription = "Increase", tint = if (isDark) Color(0xFF81C784) else PolishMediumGreen)
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                Checkbox(
-                                    checked = state.recycledChecked,
-                                    onCheckedChange = { viewModel.updateRecycled(it) },
-                                    modifier = Modifier.testTag("recycle_checkbox")
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Recycle Paper, Plastic, Glass (-50% waste CO₂)",
-                                    fontSize = 12.sp,
-                                    color = textPrimary,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                IconButton(
-                                    onClick = {
-                                        activeInfoDialog = "Recycle Savings Offset" to "Sorting and sending paper, plastics, glass, and tins to recycling loops significantly bypasses mining extraction carbon demands, reducing waste's carbon impact by 50%!"
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Recycling explanation",
-                                        tint = accentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
+                        WasteSectionCard(
+                            trashBags = state.trashBags,
+                            recycledChecked = state.recycledChecked,
+                            accentGreen = accentGreen,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            isDark = isDark,
+                            onTrashBagsChange = { viewModel.updateTrashBags(it) },
+                            onRecycledChange = { viewModel.updateRecycled(it) },
+                            onInfoDialog = { activeInfoDialog = it }
+                        )
                     }
                 }
 
                 "habits" -> {
                     item {
-                        Column {
-                            Text(
-                                text = "Log Daily Saving Actions",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "Select actions you took today to reduce your baseline emissions:",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(bottom = 10.dp)
-                            )
-                        }
+                        HabitsTabHeader()
                     }
 
                     // Preset action chips grid (First row)
@@ -859,126 +449,17 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
 
                 "ai" -> {
                     item {
-                        Column {
-                            Text(
-                                text = "Gemini Advisor Insights",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Text(
-                                text = "Receive custom eco analyses, comparison values, and actionable sustainability rules directly from Gemini Flash based on your daily emissions data.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 12.dp)
-                            )
-
-                            Button(
-                                onClick = { viewModel.generateAIInsights() },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .testTag("ai_insights_button"),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Analyze with EcoPrint AI", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                    RoundedCornerShape(16.dp)
-                                )
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surface)
-                                .padding(14.dp)
-                        ) {
-                            if (isInsightLoading) {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Text(
-                                        text = "Calculating patterns and consulting Gemini API...",
-                                        fontSize = 12.sp,
-                                        textAlign = TextAlign.Center,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    )
-                                }
-                            } else if (aiInsightText.isEmpty()) {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    LeafIcon(
-                                        modifier = Modifier.size(42.dp),
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "No AI insights generated yet today.\nClick the button above to study your carbon profile!",
-                                        fontSize = 12.sp,
-                                        textAlign = TextAlign.Center,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                    )
-                                }
-                            } else {
-                                Text(
-                                    text = aiInsightText,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    lineHeight = 19.sp,
-                                    modifier = Modifier.testTag("ai_response_text").padding(4.dp)
-                                )
-                            }
-                        }
+                        AiTabHeader(
+                            aiInsightText = aiInsightText,
+                            isInsightLoading = isInsightLoading,
+                            onGenerateClick = { viewModel.generateAIInsights() }
+                        )
                     }
                 }
 
                 "history" -> {
                     item {
-                        Column {
-                            Text(
-                                text = "Impact Analytics History",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-                            Text(
-                                text = "Track your historical performance relative to the global daily average threshold of 12.0 kg CO₂.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                        }
-                    }
-
-                    // Chart visualization inside LazyColumn
-                    if (historyList.isNotEmpty()) {
-                        item {
-                            CanvasChartCard(historyList)
-                        }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        HistoryTabHeader(historyList = historyList)
                     }
 
                     if (historyList.isEmpty()) {
@@ -1189,13 +670,16 @@ fun CarbonDashboard(viewModel: CarbonViewModel) {
 }
 
 // ==== Date Navigation Selector ====
+/**
+ * DateSelector presents date traversal utilities supporting previous/next navigation controls.
+ */
 @Composable
-fun DateSelector(
+internal fun DateSelector(
     dateString: String,
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit,
     isNextEnabled: Boolean
-) {
+): Unit {
     val isDark = isSystemInDarkTheme()
     val dateTextColor = if (isDark) Color(0xFF81C784) else MaterialTheme.colorScheme.primary
     val subTextColor = if (isDark) Color(0xFFCFD5CD) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -1259,13 +743,16 @@ fun DateSelector(
 }
 
 // ==== High-Fidelity Custom Canvas Carbon Dial and Statistics Gauge ====
+/**
+ * CarbonFootprintGaugeCard displays calculated stats alongside a radial canvas dial gauge representation.
+ */
 @Composable
-fun CarbonFootprintGaugeCard(
+internal fun CarbonFootprintGaugeCard(
     baseline: Float,
     offset: Float,
     net: Float,
     dailyGoal: Float
-) {
+): Unit {
     val maxDialValue = 40f
     val progressFraction = (net / maxDialValue).coerceIn(0f, 1f)
 
@@ -1489,11 +976,14 @@ fun CarbonFootprintGaugeCard(
 }
 
 // ==== Tab Bar ====
+/**
+ * TabNavigationRow represents the central navigational tab option card in the main view.
+ */
 @Composable
-fun TabNavigationRow(
+internal fun TabNavigationRow(
     activeTab: String,
     onTabSelected: (String) -> Unit
-) {
+): Unit {
     val tabs = listOf(
         Triple("calculator", "Track", Icons.Default.Edit),
         Triple("habits", "Eco-Habits", Icons.Default.CheckCircle),
@@ -1576,8 +1066,11 @@ fun TabNavigationRow(
 }
 
 // ==== High-Fidelity Minimizable / Expandable Card Component ====
+/**
+ * CarbonCalculatorSectionCard handles visual collapsible grouping for specific carbon emission sectors.
+ */
 @Composable
-fun CarbonCalculatorSectionCard(
+internal fun CarbonCalculatorSectionCard(
     title: String,
     leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
     accentColor: Color,
@@ -1585,7 +1078,7 @@ fun CarbonCalculatorSectionCard(
     onHeaderClick: () -> Unit,
     summaryText: String,
     content: @Composable ColumnScope.() -> Unit
-) {
+): Unit {
     val isDark = isSystemInDarkTheme()
     val sectionCardBorder = if (isDark) Color(0xFF2E332E) else PolishBorder
     val sectionTitleColor = if (isDark) Color.White else PolishTextPrimary
@@ -1672,12 +1165,15 @@ fun CarbonCalculatorSectionCard(
 }
 
 // ==== Preset Chip ====
+/**
+ * PresetHabitChip is a reusable row scope component for selecting prefabricated green habits easily.
+ */
 @Composable
-fun RowScope.PresetHabitChip(
+internal fun RowScope.PresetHabitChip(
     name: String,
     savings: Float,
     onClick: () -> Unit
-) {
+): Unit {
     val iconEmoji = when {
         name.contains("bicycle", ignoreCase = true) || name.contains("cycle", ignoreCase = true) -> "🚲"
         name.contains("meal", ignoreCase = true) || name.contains("eat", ignoreCase = true) || name.contains("diet", ignoreCase = true) -> "🥗"
@@ -1736,11 +1232,14 @@ fun RowScope.PresetHabitChip(
 }
 
 // ==== Logged Habit Row ====
+/**
+ * LoggedHabitRow renders a single item inside the registered carbon offset habits daily history.
+ */
 @Composable
-fun LoggedHabitRow(
+internal fun LoggedHabitRow(
     action: LoggedAction,
     onDelete: () -> Unit
-) {
+): Unit {
     val iconEmoji = when {
         action.actionName.contains("bicycle", ignoreCase = true) || action.actionName.contains("cycle", ignoreCase = true) -> "🚲"
         action.actionName.contains("meal", ignoreCase = true) || action.actionName.contains("eat", ignoreCase = true) -> "🥗"
@@ -1818,8 +1317,11 @@ fun LoggedHabitRow(
 }
 
 // ==== Simple Custom Graphical Chart Card ====
+/**
+ * CanvasChartCard displays a visual timeline graph tracking calculations of the past 7 days.
+ */
 @Composable
-fun CanvasChartCard(days: List<TrackedDay>) {
+internal fun CanvasChartCard(days: List<TrackedDay>): Unit {
     val displayedDays = days.take(7).reversed() // past 7 log entries
     val maxCo2 = (displayedDays.maxOfOrNull { it.totalCo2 } ?: 20f).coerceAtLeast(15f)
 
@@ -1882,8 +1384,11 @@ fun CanvasChartCard(days: List<TrackedDay>) {
 }
 
 // ==== Historical Records Row ====
+/**
+ * HistoricalDayRow presents a historical snapshot of calculated emissions for analytics summaries.
+ */
 @Composable
-fun HistoricalDayRow(day: TrackedDay) {
+internal fun HistoricalDayRow(day: TrackedDay): Unit {
     val ratingColor = if (day.totalCo2 <= 12f) PolishMediumGreen else PolishDangerRed
     val isDark = isSystemInDarkTheme()
     val rowBg = if (isDark) SoftDarkCard else PolishSoftGrayGreen
@@ -1936,8 +1441,11 @@ fun HistoricalDayRow(day: TrackedDay) {
 }
 
 // ==== Animated/Inline Leaf Icon Graphics ====
+/**
+ * LeafIcon represents a beautiful organic vector leaf canvas graphic.
+ */
 @Composable
-fun LeafIcon(modifier: Modifier = Modifier, color: Color = PolishMediumGreen) {
+public fun LeafIcon(modifier: Modifier = Modifier, color: Color = PolishMediumGreen): Unit {
     Canvas(modifier = modifier) {
         val path = androidx.compose.ui.graphics.Path().apply {
             moveTo(size.width * 0.2f, size.height * 0.8f)
@@ -1965,11 +1473,14 @@ fun LeafIcon(modifier: Modifier = Modifier, color: Color = PolishMediumGreen) {
 }
 
 // ==== Custom Habit Dialog ====
+/**
+ * CustomHabitAddDialog displays an overlay alert modal enabling registration/logging of bespoke carbon reduction actions.
+ */
 @Composable
-fun CustomHabitAddDialog(
+internal fun CustomHabitAddDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, Float, String) -> Unit
-) {
+): Unit {
     var name by remember { mutableStateOf("") }
     var savingsString by remember { mutableStateOf("1.5") }
     var selectedCategory by remember { mutableStateOf("transport") }
@@ -2058,13 +1569,16 @@ fun CustomHabitAddDialog(
 }
 
 // ==== High-Fidelity Custom User Profile Customization Dialog ====
+/**
+ * UserProfileEditDialog displays an overlay alert modal enabling modification/customization of user profile name and target daily carbon budget.
+ */
 @Composable
-fun UserProfileEditDialog(
+internal fun UserProfileEditDialog(
     currentName: String,
     currentBudget: Float,
     onDismiss: () -> Unit,
     onConfirm: (String, Float) -> Unit
-) {
+): Unit {
     var nameInput by remember { mutableStateOf(currentName) }
     var budgetInput by remember { mutableStateOf(currentBudget.toString()) }
 
@@ -2117,3 +1631,616 @@ fun UserProfileEditDialog(
         }
     )
 }
+
+// ==== Modularized Helper Composables ====
+
+@Composable
+internal fun UserProfileHeader(
+    userName: String,
+    trackingStreak: Int,
+    accentGreen: Color,
+    textPrimary: Color,
+    isDark: Boolean,
+    onProfileClick: () -> Unit,
+    onStreakClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onProfileClick() }
+            .testTag("user_profile_header")
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        val avatarInitials = remember(userName) {
+            val parts = userName.trim().split("\\s+".toRegex())
+            if (parts.size >= 2) {
+                (parts[0].take(1) + parts[1].take(1)).uppercase()
+            } else if (parts.isNotEmpty() && parts[0].isNotBlank()) {
+                parts[0].take(2).uppercase()
+            } else {
+                "RV"
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(if (isDark) Color(0xFF2E4E30) else Color(0xFFD1E8D1), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = avatarInitials,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (isDark) Color.White else Color(0xFF111F11),
+                fontSize = 15.sp
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "WELCOME BACK (TAP TO EDIT PROFILE)",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentGreen,
+                    letterSpacing = 0.5.sp
+                )
+                Text(
+                    text = userName,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = textPrimary
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (trackingStreak > 0) MaterialTheme.colorScheme.primaryContainer else if (isDark) Color(0xFF2C352E) else Color(0xFFE2EBE3),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .clickable { onStreakClick() }
+            ) {
+                Text(
+                    text = if (trackingStreak > 0) "🔥 $trackingStreak Day Streak" else "🌱 0 Day Streak",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 11.sp,
+                    color = if (trackingStreak > 0) MaterialTheme.colorScheme.onPrimaryContainer else if (isDark) Color(0xFFA2CBA5) else PolishTextDarkGreen,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun TransportSectionCard(
+    carKm: Float,
+    transitKm: Float,
+    flightHoursYearly: Float,
+    accentGreen: Color,
+    textPrimary: Color,
+    onCarChange: (Float) -> Unit,
+    onTransitChange: (Float) -> Unit,
+    onFlightChange: (Float) -> Unit,
+    onSave: () -> Unit,
+    onInfoDialog: (Pair<String, String>) -> Unit
+) {
+    var transportExpanded by remember { mutableStateOf(true) }
+
+    CarbonCalculatorSectionCard(
+        title = "1. Transport Footprint (0.2kg CO₂/km)",
+        leadingIcon = Icons.Default.PlayArrow,
+        accentColor = PolishMediumGreen,
+        isExpanded = transportExpanded,
+        onHeaderClick = { transportExpanded = !transportExpanded },
+        summaryText = "Car: ${carKm.toInt()} km • Transit: ${transitKm.toInt()} km • Flights: ${flightHoursYearly.toInt()} hrs"
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Personal Car Distance: ${String.format("%.0f", carKm)} km/day",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            IconButton(
+                onClick = {
+                    onInfoDialog("Personal Car Distance" to "Commuting by car has a high carbon impact. On average, standard engines release 0.20 kg of CO₂ per kilometer driven. Transitioning to electric cars or carpooling helps save emission offsets.")
+                },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Car distance explanation",
+                    tint = accentGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Slider(
+            value = carKm,
+            onValueChange = onCarChange,
+            onValueChangeFinished = onSave,
+            valueRange = 0f..150f,
+            colors = SliderDefaults.colors(
+                thumbColor = PolishMediumGreen,
+                activeTrackColor = PolishMediumGreen
+            ),
+            modifier = Modifier.testTag("car_slider")
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Public Transit: ${String.format("%.0f", transitKm)} km/day",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            IconButton(
+                onClick = {
+                    onInfoDialog("Public Transit" to "Trains, buses, and subways are highly efficient. They emit only around 0.08 kg of CO₂ per passenger kilometer, sharing the transit footprint effectively.")
+                },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Public Transit explanation",
+                    tint = accentGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Slider(
+            value = transitKm,
+            onValueChange = onTransitChange,
+            onValueChangeFinished = onSave,
+            valueRange = 0f..100f,
+            colors = SliderDefaults.colors(
+                thumbColor = PolishMediumGreen,
+                activeTrackColor = PolishMediumGreen
+            ),
+            modifier = Modifier.testTag("transit_slider")
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Yearly Flight Hours: ${String.format("%.0f", flightHoursYearly)} hours",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            IconButton(
+                onClick = {
+                    onInfoDialog("Yearly Flight Hours" to "Aviation emissions are extremely dense. Flying contributes approximately 250 kg of CO₂ per hour in the air. Offsets or fewer flights make a major climate difference.")
+                },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Flight hours explanation",
+                    tint = accentGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Slider(
+            value = flightHoursYearly,
+            onValueChange = onFlightChange,
+            onValueChangeFinished = onSave,
+            valueRange = 0f..80f,
+            colors = SliderDefaults.colors(
+                thumbColor = PolishMediumGreen,
+                activeTrackColor = PolishMediumGreen
+            )
+        )
+    }
+}
+
+@Composable
+internal fun UtilitySectionCard(
+    electricityKwh: Float,
+    heatingLevel: String,
+    accentGreen: Color,
+    textPrimary: Color,
+    textDarkGreen: Color,
+    textSecondary: Color,
+    lightGreenBg: Color,
+    borderColor: Color,
+    onElectricityChange: (Float) -> Unit,
+    onHeatingChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onInfoDialog: (Pair<String, String>) -> Unit
+) {
+    var utilitiesExpanded by remember { mutableStateOf(true) }
+
+    CarbonCalculatorSectionCard(
+        title = "2. Utility & Power (0.45kg CO₂/kW)",
+        leadingIcon = Icons.Default.Star,
+        accentColor = PolishMediumGreen,
+        isExpanded = utilitiesExpanded,
+        onHeaderClick = { utilitiesExpanded = !utilitiesExpanded },
+        summaryText = "Elec: ${electricityKwh.toInt()} kWh • Heat Fuel: $heatingLevel"
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Electricity Used: ${String.format("%.0f", electricityKwh)} kWh/day",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            IconButton(
+                onClick = {
+                    onInfoDialog("Electricity Power Consumption" to "Electrical grids rely on fossil fuels in many areas. Every kWh consumed averages 0.45 kg of CO₂ emissions. Energy-saving appliances and solar power help minimize this footprint.")
+                },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Electricity explanation",
+                    tint = accentGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Slider(
+            value = electricityKwh,
+            onValueChange = onElectricityChange,
+            onValueChangeFinished = onSave,
+            valueRange = 0f..50f,
+            colors = SliderDefaults.colors(
+                thumbColor = PolishMediumGreen,
+                activeTrackColor = PolishMediumGreen
+            ),
+            modifier = Modifier.testTag("electricity_slider")
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Home Heating Fuel Intensity: $heatingLevel",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            IconButton(
+                onClick = {
+                    onInfoDialog("Home Heating Fuel" to "Heating fuel types differ heavily in carbon intensity. 'None' represents electric/heat pumps, whereas 'Low', 'Medium', or 'High' denote natural gas/heating oil furnace systems.")
+                },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Heating fuel explanation",
+                    tint = accentGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val levels = listOf("None", "Low", "Medium", "High")
+            levels.forEach { level ->
+                val isSelected = heatingLevel == level
+                OutlinedButton(
+                    onClick = { onHeatingChange(level) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (isSelected) lightGreenBg else Color.Transparent
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) PolishMediumGreen else borderColor
+                    ),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        text = level,
+                        fontSize = 11.sp,
+                        color = if (isSelected) textDarkGreen else textSecondary,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun NutritionSectionCard(
+    dietPreference: String,
+    accentGreen: Color,
+    textPrimary: Color,
+    textDarkGreen: Color,
+    textSecondary: Color,
+    lightGreenBg: Color,
+    borderColor: Color,
+    onDietChange: (String) -> Unit,
+    onInfoDialog: (Pair<String, String>) -> Unit
+) {
+    var nutritionExpanded by remember { mutableStateOf(false) }
+
+    CarbonCalculatorSectionCard(
+        title = "3. Nutrition & Food Style",
+        leadingIcon = Icons.Default.Favorite,
+        accentColor = PolishMediumGreen,
+        isExpanded = nutritionExpanded,
+        onHeaderClick = { nutritionExpanded = !nutritionExpanded },
+        summaryText = "Preference: $dietPreference"
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Chosen Preference: $dietPreference",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            IconButton(
+                onClick = {
+                    onInfoDialog("Diet Footprint Preferences" to "Diets differ widely in resource demand. Vegan/plant-based diets emit only ~1.2 kg CO₂/day. Vegetarian diets average ~1.7 kg CO₂/day. Balanced diets emit ~2.5 kg CO₂/day, whereas Meat-Heavy diets exceed ~4.2 kg CO₂/day due to intensive livestock emissions.")
+                },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Diet explanation",
+                    tint = accentGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val diets = listOf("Vegan", "Vegetarian", "Balanced", "Meat Heavy")
+            diets.forEach { diet ->
+                val isSelected = dietPreference == diet
+                val color = if (isSelected) textDarkGreen else textSecondary
+                OutlinedButton(
+                    onClick = { onDietChange(diet) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (isSelected) lightGreenBg else Color.Transparent
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) PolishMediumGreen else borderColor
+                    )
+                ) {
+                    Text(
+                        text = diet,
+                        fontSize = 9.sp,
+                        color = color,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun WasteSectionCard(
+    trashBags: Float,
+    recycledChecked: Boolean,
+    accentGreen: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    isDark: Boolean,
+    onTrashBagsChange: (Float) -> Unit,
+    onRecycledChange: (Boolean) -> Unit,
+    onInfoDialog: (Pair<String, String>) -> Unit
+) {
+    var wasteExpanded by remember { mutableStateOf(false) }
+
+    CarbonCalculatorSectionCard(
+        title = "4. Waste & Recycle (1.5kg CO₂/bag)",
+        leadingIcon = Icons.Default.Warning,
+        accentColor = PolishMediumGreen,
+        isExpanded = wasteExpanded,
+        onHeaderClick = { wasteExpanded = !wasteExpanded },
+        summaryText = "Trash bags: ${String.format("%.1f", trashBags)} bags • Recycled: ${if (recycledChecked) "Yes" else "No"}"
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Daily Trash Generation",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary
+                    )
+                    IconButton(
+                        onClick = {
+                            onInfoDialog("Daily Trash Impact" to "Unsorted municipal solid waste decomposes in landfills to release powerful greenhouse gases including methane. Each standard trash bag (~30L) is calculated at approximately 1.5 kg of lifecycle CO₂.")
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Trash explanation",
+                            tint = accentGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = "${String.format("%.1f", trashBags)} trash bags",
+                    fontSize = 12.sp,
+                    color = textSecondary
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = { onTrashBagsChange((trashBags - 0.5f).coerceAtLeast(0f)) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Decrease", tint = if (isDark) Color(0xFFE57373) else PolishDangerRed.copy(alpha = 0.8f))
+                }
+                IconButton(
+                    onClick = { onTrashBagsChange(trashBags + 0.5f) },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Increase", tint = if (isDark) Color(0xFF81C784) else PolishMediumGreen)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Checkbox(
+                checked = recycledChecked,
+                onCheckedChange = { onRecycledChange(it) },
+                modifier = Modifier.testTag("recycle_checkbox")
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Recycle Paper, Plastic, Glass (-50% waste CO₂)",
+                fontSize = 12.sp,
+                color = textPrimary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            IconButton(
+                onClick = {
+                    onInfoDialog("Recycle Savings Offset" to "Sorting and sending paper, plastics, glass, and tins to recycling loops significantly bypasses mining extraction carbon demands, reducing waste's carbon impact by 50%!")
+                },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Recycling explanation",
+                    tint = accentGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun HabitsTabHeader() {
+    Column {
+        Text(
+            text = "Log Daily Saving Actions",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Select actions you took today to reduce your baseline emissions:",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+    }
+}
+
+@Composable
+internal fun AiTabHeader(
+    aiInsightText: String,
+    isInsightLoading: Boolean,
+    onGenerateClick: () -> Unit
+) {
+    Column {
+        Text(
+            text = "Gemini Advisor Insights",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text = "Receive custom eco analyses, comparison values, and actionable sustainability rules directly from Gemini Flash based on your daily emissions data.",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+        )
+
+        Button(
+            onClick = onGenerateClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .testTag("ai_insights_button"),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Analyze with EcoPrint AI", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+internal fun HistoryTabHeader(historyList: List<TrackedDay>) {
+    Column {
+        Text(
+            text = "Impact Analytics History",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        Text(
+            text = "Track your historical performance relative to the global daily average threshold of 12.0 kg CO₂.",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+    }
+}
+

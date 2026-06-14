@@ -12,18 +12,32 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-object GeminiService {
-    private const val TAG = "GeminiService"
-    private const val MODEL_NAME = "gemini-3.5-flash"
-    private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL_NAME:generateContent"
+/**
+ * Service companion that connects with the Google Generative AI (Gemini) REST API
+ * to generate environment recommendations and personalized eco insights based on
+ * the user's daily carbon footprint metrics and logged reduction habits.
+ */
+public object GeminiService {
+    private const val TAG: String = "GeminiService"
+    private const val MODEL_NAME: String = "gemini-3.5-flash"
+    private const val BASE_URL: String = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL_NAME:generateContent"
 
-    private val client = OkHttpClient.Builder()
+    private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    suspend fun getPersonalizedEcoInsights(
+    /**
+     * Synthesizes day metrics and reductions list into an LLM prompt and queries Gemini API
+     * asynchronously. Returns a formatted markdown guide with assessments and tips.
+     *
+     * @param totalCo2 Sum total of computed emission metrics in kg CO2.
+     * @param fields Key-value map representing the decomposed footprints from transit, utilities, diet, and waste.
+     * @param loggedActions List of green habit actions registered by the user.
+     * @return Markdown-formatted narrative insights or error directions response.
+     */
+    public suspend fun getPersonalizedEcoInsights(
         totalCo2: Float,
         fields: Map<String, Float>,
         loggedActions: List<LoggedAction>

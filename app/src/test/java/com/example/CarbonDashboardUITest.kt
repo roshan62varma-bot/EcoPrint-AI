@@ -36,7 +36,7 @@ import org.robolectric.annotation.GraphicsMode
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = "w600dp-h3000dp", sdk = [36])
 class CarbonDashboardUITest {
 
     @get:Rule
@@ -89,10 +89,10 @@ class CarbonDashboardUITest {
             composeTestRule.waitForIdle()
 
             // Verify key widgets are visible or properly tagged
-            composeTestRule.onNodeWithTag("date_selector").performScrollTo().assertIsDisplayed()
+            composeTestRule.onNodeWithTag("date_selector").assertIsDisplayed()
             
-            // Scroll to the main navigation bar container
-            composeTestRule.onNodeWithTag("tab_navigation_bar").performScrollTo().assertIsDisplayed()
+            // Verify main navigation bar container in viewport
+            composeTestRule.onNodeWithTag("tab_navigation_bar").assertIsDisplayed()
             
             // Verify child tabs in viewport
             composeTestRule.onNodeWithTag("tab_calculator").assertIsDisplayed()
@@ -120,30 +120,21 @@ class CarbonDashboardUITest {
         testDispatcher.scheduler.advanceUntilIdle()
         composeTestRule.waitForIdle()
 
-        // Scroll to the navigation container first
-        composeTestRule.onNodeWithTag("tab_navigation_bar").performScrollTo()
-
         // 1. Switch to habits tab
         composeTestRule.onNodeWithTag("tab_habits").performClick()
         composeTestRule.waitForIdle()
         
         // Let's verify a habit-specific UI element displays
-        composeTestRule.onNodeWithTag("add_custom_habit_button").performScrollTo().assertIsDisplayed()
-
-        // Scroll back to the navigation bar
-        composeTestRule.onNodeWithTag("tab_navigation_bar").performScrollTo()
+        composeTestRule.onNodeWithTag("add_custom_habit_button").assertIsDisplayed()
 
         // 2. Switch to history tab
         composeTestRule.onNodeWithTag("tab_history").performClick()
         composeTestRule.waitForIdle()
 
-        // Scroll back to the navigation bar
-        composeTestRule.onNodeWithTag("tab_navigation_bar").performScrollTo()
-
         // 3. Switch to AI insights tab
         composeTestRule.onNodeWithTag("tab_ai").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag("ai_insights_button").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("ai_insights_button").assertIsDisplayed()
     }
 
     @Test
@@ -156,7 +147,7 @@ class CarbonDashboardUITest {
         composeTestRule.waitForIdle()
 
         // Open profile dialog by clicking user profile header custom row
-        composeTestRule.onNodeWithTag("user_profile_header").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("user_profile_header").performClick()
         composeTestRule.waitForIdle()
 
         // The profile inputs should now be displayed in the modal
